@@ -27,7 +27,7 @@ def normalized(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 
 
-def get_trigger_indexes_photodiode(data_raw_file='PAT_3066_EEG_708977_Anon_CategoryLocalizer.edf',data_path = '/Volumes/GoogleDrive/My Drive/EEG_DATA_PIERRE/PAT_3066',trigger_channel='Xe1',t_start = 0,t_end=-1,threshold_val=0.8,do_plot=True,t_shift=35):
+def get_trigger_indexes_photodiode(data_raw_file='PAT_3066_EEG_708977_Anon_CategoryLocalizer.edf',data_path = '/Volumes/GoogleDrive/My Drive/EEG_DATA_PIERRE/PAT_3066',trigger_channel='Xe1',t_start = 0,t_end=-1,threshold_val=0.8,do_plot=True,t_shift=35, flip_trigs=False,skip_samples=50):
     """
     get_trigger_indexes_photodiode parses the onset and offset from a time-series photodiode recording
 
@@ -55,6 +55,11 @@ def get_trigger_indexes_photodiode(data_raw_file='PAT_3066_EEG_708977_Anon_Categ
     picks = mne.pick_channels_regexp(raw.info.ch_names, regexp=trigger_channel)
     if t_end == -1: t_end = raw.__len__()
     raw = raw.get_data(picks=picks,start=t_start,stop=t_end)
+
+    # If peeks are opposide values (i.e. flipped on y = 0:
+    if flip_trigs==True: raw = raw*-1
+
+    # normalize raw signal and create time vector, for easy of processing
     raw = normalized(raw[0])
     print(len(raw),np.shape(raw))
     time_s = np.linspace(0,len(raw),num=len(raw))
@@ -65,9 +70,13 @@ def get_trigger_indexes_photodiode(data_raw_file='PAT_3066_EEG_708977_Anon_Categ
     temp3 = normalized(temp3)
 
     # find the peaks
-    index_final_offset,_ = scipy.signal.find_peaks(temp3, height=threshold_val*temp3.max())
-    index_final_onset,_ = scipy.signal.find_peaks(-1*temp3, height=threshold_val-1)
-
+    index_final_onset,_ = scipy.signal.find_peaks(temp3, height=threshold_val*temp3.max())
+    index_final_offset,_ = scipy.signal.find_peaks(-1*temp3, height=threshold_val-1)
+    print(index_final_onset[0])
+    if abs(index_final_onset[0])<skip_samples:
+        print('first removed')
+        index_final_onset=np.delete(index_final_onset,0)
+        
     # Information Printed
     print('*   length of onset indexes: ',len(index_final_onset))
     print('*   length of offset indexes: ',len(index_final_offset))#: '+str(len(index_final_offset))])

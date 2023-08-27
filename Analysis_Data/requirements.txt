@@ -1,0 +1,6 @@
+numpy==1.25.2
+mne-python
+pyqtgraph
+pandas
+matplotlib
+python==3.10.12
